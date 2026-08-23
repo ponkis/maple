@@ -1,8 +1,10 @@
+import math
 import random
 import sys
 
 import numpy as np
 import pygame
+from pygame._sdl2 import Window
 
 from maple.config import (
     FPS,
@@ -29,9 +31,9 @@ class Engine:
 
         # Phase 2: Create window using loaded dimensions
         self.W, self.H = self.resources.pond_raw.get_size()
-        self.desktop_size = pygame.display.get_desktop_sizes()[0]
         self.fullscreen = False
         self.display = self._create_display()
+        self.window = Window.from_display_module()
         self._update_viewport()
 
         # Professional window branding
@@ -115,14 +117,25 @@ class Engine:
         pygame.quit()
 
     def _create_display(self):
-        """Create either a native-size window or a borderless desktop window."""
-        if self.fullscreen:
-            return pygame.display.set_mode(self.desktop_size, pygame.NOFRAME)
+        """Create the initial native-size display."""
         return pygame.display.set_mode((self.W, self.H))
 
     def _update_viewport(self):
-        """Use the entire window as the output and input viewport."""
-        self.viewport = pygame.Rect((0, 0), self.display.get_size())
+        """Fill fullscreen without distortion by uniformly scaling and cropping."""
+        display_width, display_height = self.display.get_size()
+        if not self.fullscreen:
+            self.viewport = pygame.Rect(0, 0, display_width, display_height)
+            return
+
+        scale = max(display_width / self.W, display_height / self.H)
+        width = math.ceil(self.W * scale)
+        height = math.ceil(self.H * scale)
+        self.viewport = pygame.Rect(
+            (display_width - width) // 2,
+            (display_height - height) // 2,
+            width,
+            height,
+        )
 
     def _logical_position(self, position):
         """Map a display position into the simulation's logical coordinates."""
@@ -134,7 +147,7 @@ class Engine:
         return min(self.W - 1, int(x)), min(self.H - 1, int(y))
 
     def _present(self):
-        """Copy the logical canvas to the window or stretch it across fullscreen."""
+        """Copy the canvas to the window or aspect-fill the fullscreen display."""
         if self.fullscreen:
             frame = pygame.transform.smoothscale(self.screen, self.viewport.size)
             self.display.blit(frame, self.viewport)
@@ -143,12 +156,19 @@ class Engine:
         pygame.display.flip()
 
     def toggle_fullscreen(self):
-        """Toggle fullscreen without exposing an on-screen control."""
-        self.fullscreen = not self.fullscreen
+        """Toggle SDL desktop fullscreen without changing the monitor mode."""
+        target = not self.fullscreen
         try:
-            self.display = self._create_display()
+            if target:
+                self.window.set_fullscreen(desktop=True)
+            else:
+                self.window.set_windowed()
         except pygame.error as error:
-            self.fullscreen = False
-            self.display = self._create_display()
-            print(f"Could not enter fullscreen: {error}", file=sys.stderr)
+            print(f"Could not change fullscreen mode: {error}", file=sys.stderr)
+            return
+
+        self.fullscreen = target
+        pygame.event.pump()
+        pygame.display.get_window_size()
+        self.display = pygame.display.get_surface()
         self._update_viewport()

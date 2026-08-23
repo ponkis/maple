@@ -111,7 +111,7 @@ You can start the simulator in one of two ways:
 | `Esc` | Leave fullscreen; quit when already windowed |
 | Window close | Quit |
 
-Fullscreen is deliberately keyboard-only. Maple uses a borderless window at the current desktop resolution and fills the entire screen while mapping ripple input back to its logical canvas.
+Fullscreen is deliberately keyboard-only. Maple uses SDL desktop fullscreen at the monitor's current resolution, then uniformly scales and center-crops the scene to fill the screen without distortion. Ripple input is mapped through the crop to the logical canvas.
 
 ---
 

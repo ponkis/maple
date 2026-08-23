@@ -44,6 +44,6 @@ The pond asset determines the `960 × 800` logical resolution. There is intentio
 
 - `F` and `F11` toggle fullscreen.
 - `Esc` returns to windowed mode before it quits the application.
-- Maple stretches the logical canvas across a borderless window at the current desktop resolution and maps pointer coordinates back into the simulation.
+- SDL desktop fullscreen keeps the monitor's current resolution and covers its complete bounds. Maple uniformly scales and center-crops the logical canvas to fill without distortion, then maps pointer coordinates through that crop.
 
 Replacing `pond.jpg` with another resolution changes the simulation bounds. Test leaf spawning, ripple edges, and fullscreen scaling after doing so.

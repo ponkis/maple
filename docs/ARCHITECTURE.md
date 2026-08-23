@@ -31,7 +31,7 @@ resources events entities
 
 ### `maple.engine`
 
-Owns application lifetime, display modes, the event loop, spawn scheduling, entity collections, and frame composition. Fullscreen mode creates a borderless window at the current desktop resolution and scales the logical canvas to fill it without changing the monitor mode.
+Owns application lifetime, display modes, the event loop, spawn scheduling, entity collections, and frame composition. SDL desktop fullscreen expands the native window to the monitor bounds without changing its display mode. The logical canvas is uniformly scaled and center-cropped to fill that surface without distortion.
 
 ### `maple.resources`
 
