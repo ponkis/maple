@@ -1,17 +1,27 @@
+<div align="center">
+
 # maple
 
-An interactive simulator of the classic **Android 4.0 Autumn Live Wallpaper**. Featuring realistic falling maple leaves, mouse-triggered water ripple calculations, and ambient water splash sound effects.
+An interactive recreation of the Android 4.0 Autumn live wallpaper.
 
-Developed by **ponkis**.
+[![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Pygame](https://img.shields.io/badge/pygame-2.x-0D8F45)](https://www.pygame.org/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
----
+by **[ponkis](https://github.com/ponkis)** · powered by [ponkis.xyz](https://ponkis.xyz)
+
+</div>
+
+Maple brings the calm pond, falling leaves, and touch-driven ripples of the classic wallpaper to a lightweight native desktop window.
 
 ## Features
 
-- **Leaf Simulation**: Dynamic falling leaf mechanics with custom swaying, scaling, and rotation.
-- **Water Ripple Simulation**: Interactive ripple creation driven by high-performance NumPy array operations that compute coordinate displacements and shading updates on the water surface.
-- **Branded Design**: Window captions, embedded app icon (`ico.ico`), and assets organized neatly.
-- **Production Spec**: Ready-to-build configuration for standalone Windows executables.
+- Procedural leaves with independent fall speed, sway, rotation, and scale.
+- Localized NumPy water displacement, shading, and fading ripple rings.
+- Responsive splash audio selected from multiple ambient samples.
+- Keyboard-only fullscreen controls with resolution-aware input scaling.
+- Asset loading that works from source and from a PyInstaller executable.
+- A compact package layout separated by runtime responsibility.
 
 ---
 
@@ -25,9 +35,11 @@ The project is structured following clean architectural practices:
 ├── .gitignore
 ├── LICENSE
 ├── README.md
+├── docs/                # Architecture and configuration notes
 ├── requirements.txt     # Python dependencies
 ├── main.py              # Root launcher wrapper
 ├── maple.spec           # PyInstaller build specification
+├── pyproject.toml       # Python project metadata
 └── maple/               # Package root
     ├── __init__.py      # Versioning & author metadata
     ├── __main__.py      # Package execution entry point
@@ -40,6 +52,7 @@ The project is structured following clean architectural practices:
         ├── leaf.py      # Leaf physics and drawing logic
         └── ripple.py    # NumPy water ripple simulation calculations
 ```
+See [Architecture](docs/ARCHITECTURE.md) for the runtime data flow and [Configuration](docs/CONFIGURATION.md) for tuning constants.
 
 ---
 
@@ -89,9 +102,16 @@ You can start the simulator in one of two ways:
   python -m maple
   ```
 
-Controls:
-- **Mouse Click (Left Click)**: Create a water ripple at the cursor's location (triggers ambient water splash sounds).
-- **Escape Key / Window Close**: Exit the application.
+## Controls
+
+| Input | Action |
+| --- | --- |
+| Left click | Create a ripple and play a splash sound |
+| `F` or `F11` | Toggle fullscreen |
+| `Esc` | Leave fullscreen; quit when already windowed |
+| Window close | Quit |
+
+Fullscreen is deliberately keyboard-only. Maple uses a borderless window at the current desktop resolution and fills the entire screen while mapping ripple input back to its logical canvas.
 
 ---
 
@@ -106,13 +126,15 @@ To build a standalone `.exe` using PyInstaller:
 
 2. **Run PyInstaller with the spec file**:
    ```bash
-   pyinstaller maple.spec
+   pyinstaller --clean maple.spec
    ```
 
-The compiled binary will be placed inside the `dist/maple/` or `dist/maple.exe` directory. It packages all images and audio files internally, requiring no extra assets folders to run.
+The standalone application is written to `dist/maple.exe`. Images, audio, and the window icon are bundled by `maple.spec`.
 
----
+## Contributing and security
+
+Contributions are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request. Report vulnerabilities privately as described in [SECURITY.md](SECURITY.md), and follow the [Code of Conduct](CODE_OF_CONDUCT.md) in project spaces.
 
 ## License
 
-This project is licensed under the MIT License - see the `LICENSE` file for details.
+Maple is available under the [MIT License](LICENSE).

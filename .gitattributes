@@ -1,2 +1,20 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Normalize source and documentation across development platforms.
+* text=auto eol=lf
+
+*.py       text eol=lf
+*.md       text eol=lf
+*.toml     text eol=lf
+*.txt      text eol=lf
+*.yml      text eol=lf
+*.yaml     text eol=lf
+
+# Preserve Windows command-file line endings when introduced.
+*.bat      text eol=crlf
+*.cmd      text eol=crlf
+*.ps1      text eol=crlf
+
+# Application assets are binary.
+*.ico      binary
+*.jpg      binary
+*.mp3      binary
+*.png      binary

@@ -1,16 +1,19 @@
 import random
-import pygame
+import sys
+
 import numpy as np
+import pygame
 
 from maple.config import (
     FPS,
     MAX_RIPPLES,
     LEAF_INITIAL_COUNT,
-    LEAF_SPAWN_INTERVAL
+    LEAF_SPAWN_INTERVAL,
 )
-from maple.resources import ResourceManager
 from maple.entities.leaf import Leaf
 from maple.entities.ripple import Ripple
+from maple.resources import ResourceManager
+
 
 class Engine:
     """
@@ -26,8 +29,11 @@ class Engine:
 
         # Phase 2: Create window using loaded dimensions
         self.W, self.H = self.resources.pond_raw.get_size()
-        self.screen = pygame.display.set_mode((self.W, self.H))
-        
+        self.desktop_size = pygame.display.get_desktop_sizes()[0]
+        self.fullscreen = False
+        self.display = self._create_display()
+        self._update_viewport()
+
         # Professional window branding
         pygame.display.set_caption("maple")
         if self.resources.window_icon:
@@ -36,6 +42,7 @@ class Engine:
         # Phase 3: Load/convert remaining runtime assets
         self.resources.load_runtime()
         self.pond_img = self.resources.pond_image
+        self.screen = pygame.Surface((self.W, self.H)).convert()
 
         self.clock = pygame.time.Clock()
         self.pond_rgb = pygame.surfarray.array3d(self.pond_img).swapaxes(0, 1).copy()
@@ -61,13 +68,23 @@ class Engine:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
-                elif event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                    running = False
+                elif event.type == pygame.KEYDOWN:
+                    if event.key in (pygame.K_f, pygame.K_F11):
+                        self.toggle_fullscreen()
+                    elif event.key == pygame.K_ESCAPE:
+                        if self.fullscreen:
+                            self.toggle_fullscreen()
+                        else:
+                            running = False
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    position = self._logical_position(event.pos)
+                    if position is None:
+                        continue
+
                     # Spawn ripple and trigger a water splash sound
                     if len(self.ripples) >= MAX_RIPPLES:
                         self.ripples.pop(0)
-                    self.ripples.append(Ripple(event.pos[0], event.pos[1]))
+                    self.ripples.append(Ripple(*position))
                     if self.resources.ripple_sounds:
                         random.choice(self.resources.ripple_sounds).play()
 
@@ -93,6 +110,45 @@ class Engine:
             for leaf in self.leaves:
                 leaf.draw(self.screen, t)
 
-            pygame.display.flip()
+            self._present()
 
         pygame.quit()
+
+    def _create_display(self):
+        """Create either a native-size window or a borderless desktop window."""
+        if self.fullscreen:
+            return pygame.display.set_mode(self.desktop_size, pygame.NOFRAME)
+        return pygame.display.set_mode((self.W, self.H))
+
+    def _update_viewport(self):
+        """Use the entire window as the output and input viewport."""
+        self.viewport = pygame.Rect((0, 0), self.display.get_size())
+
+    def _logical_position(self, position):
+        """Map a display position into the simulation's logical coordinates."""
+        if not self.viewport.collidepoint(position):
+            return None
+
+        x = (position[0] - self.viewport.x) * self.W / self.viewport.width
+        y = (position[1] - self.viewport.y) * self.H / self.viewport.height
+        return min(self.W - 1, int(x)), min(self.H - 1, int(y))
+
+    def _present(self):
+        """Copy the logical canvas to the window or stretch it across fullscreen."""
+        if self.fullscreen:
+            frame = pygame.transform.smoothscale(self.screen, self.viewport.size)
+            self.display.blit(frame, self.viewport)
+        else:
+            self.display.blit(self.screen, (0, 0))
+        pygame.display.flip()
+
+    def toggle_fullscreen(self):
+        """Toggle fullscreen without exposing an on-screen control."""
+        self.fullscreen = not self.fullscreen
+        try:
+            self.display = self._create_display()
+        except pygame.error as error:
+            self.fullscreen = False
+            self.display = self._create_display()
+            print(f"Could not enter fullscreen: {error}", file=sys.stderr)
+        self._update_viewport()
