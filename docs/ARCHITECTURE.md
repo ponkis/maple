@@ -23,15 +23,16 @@ resources events entities
 
 1. `maple.__main__` creates an `Engine`.
 2. `ResourceManager.load_initial()` loads the pond and icon before the display exists.
-3. The engine creates a `960 × 800` logical display and then converts the remaining image assets for that display format.
-4. Each frame processes input, spawns and updates entities, renders the pond and effects, and flips the display.
-5. Exiting the loop shuts down Pygame cleanly.
+3. The engine creates the initial `960 × 800` display and converts immutable source assets for that display format.
+4. A fullscreen transition reacquires the desktop-sized display and regenerates the pond surface, NumPy source buffer, leaf artwork, population, and pixel-based effect metrics at that native size.
+5. Each frame processes native input coordinates, updates entities, renders directly into the active display surface, and flips it.
+6. Exiting the loop shuts down Pygame cleanly.
 
 ## Modules
 
 ### `maple.engine`
 
-Owns application lifetime, display modes, the event loop, spawn scheduling, entity collections, and frame composition. SDL desktop fullscreen expands the native window to the monitor bounds without changing its display mode. The logical canvas is uniformly scaled and center-cropped to fill that surface without distortion.
+Owns application lifetime, display modes, the event loop, native-resolution scene regeneration, spawn scheduling, entity collections, and frame composition. SDL desktop fullscreen expands the window to the monitor bounds without changing its display mode. The engine then renders directly at those dimensions; it does not enlarge a finished frame.
 
 ### `maple.resources`
 
@@ -55,8 +56,8 @@ Runtime assets live in `maple/assets`. The Python package metadata includes them
 
 ## Design constraints
 
-- The pond image defines the logical coordinate system.
-- Mouse positions must stay in logical coordinates for ripple placement.
+- The original pond image remains an immutable raster source; a display-sized background is generated from it once per mode change.
+- Scene dimensions always match the active display surface, so mouse positions are already ripple coordinates.
 - A maximum ripple count bounds the most expensive NumPy work.
 - Resource conversion must happen after the Pygame display is created.
 - The package entry point and root launcher must remain equivalent.

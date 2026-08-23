@@ -19,7 +19,7 @@ Maple brings the calm pond, falling leaves, and touch-driven ripples of the clas
 - Procedural leaves with independent fall speed, sway, rotation, and scale.
 - Localized NumPy water displacement, shading, and fading ripple rings.
 - Responsive splash audio selected from multiple ambient samples.
-- Keyboard-only fullscreen controls with resolution-aware input scaling.
+- Keyboard-only fullscreen that regenerates the animated scene at the active display resolution.
 - Asset loading that works from source and from a PyInstaller executable.
 - A compact package layout separated by runtime responsibility.
 
@@ -111,7 +111,7 @@ You can start the simulator in one of two ways:
 | `Esc` | Leave fullscreen; quit when already windowed |
 | Window close | Quit |
 
-Fullscreen is deliberately keyboard-only. Maple uses SDL desktop fullscreen at the monitor's current resolution, then uniformly scales and center-crops the scene to fill the screen without distortion. Ripple input is mapped through the crop to the logical canvas.
+Fullscreen is deliberately keyboard-only. On a mode change, Maple rebuilds its render surface, pond buffer, NumPy ripple source, leaf artwork, population, and effect metrics at the actual display dimensions. Frames are then drawn directly to the display without scaling a completed viewport. The fixed pond bitmap is fitted once with a uniform cover and center crop because it is the only raster source.
 
 ---
 

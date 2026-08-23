@@ -1,8 +1,6 @@
-import math
 import random
 import sys
 
-import numpy as np
 import pygame
 from pygame._sdl2 import Window
 
@@ -21,6 +19,7 @@ class Engine:
     """
     Main application engine coordinating Pygame setup, events, simulation logic, and rendering.
     """
+
     def __init__(self):
         pygame.init()
         pygame.mixer.init()
@@ -28,135 +27,146 @@ class Engine:
         # Phase 1: Load initial assets for layout and branding setup
         self.resources = ResourceManager()
         self.resources.load_initial()
+        self.base_size = self.resources.pond_raw.get_size()
+        self.W, self.H = self.base_size
 
-        # Phase 2: Create window using loaded dimensions
-        self.W, self.H = self.resources.pond_raw.get_size()
+        # Phase 2: Create and brand the initial window
         self.fullscreen = False
         self.display = self._create_display()
         self.window = Window.from_display_module()
-        self._update_viewport()
-
-        # Professional window branding
         pygame.display.set_caption("maple")
         if self.resources.window_icon:
             pygame.display.set_icon(self.resources.window_icon)
 
-        # Phase 3: Load/convert remaining runtime assets
+        # Phase 3: Load runtime assets and generate the initial scene
         self.resources.load_runtime()
-        self.pond_img = self.resources.pond_image
-        self.screen = pygame.Surface((self.W, self.H)).convert()
-
+        self.pond_source = self.resources.pond_image
         self.clock = pygame.time.Clock()
-        self.pond_rgb = pygame.surfarray.array3d(self.pond_img).swapaxes(0, 1).copy()
-
         self.leaves = []
         self.ripples = []
         self.spawn_acc = 0.0
-
-        # Spawn initial scatter of leaves
-        for _ in range(LEAF_INITIAL_COUNT):
-            leaf = Leaf(self.W, self.H, self.resources.leaf_variants)
-            leaf.y = random.uniform(-200, self.H)
-            self.leaves.append(leaf)
+        self._rebuild_scene(self.display.get_size())
 
     def run(self):
         running = True
         while running:
-            # Regulate tick rate and retrieve delta time
             dt = self.clock.tick(FPS) / 1000.0
             t = pygame.time.get_ticks() / 1000.0
 
-            # 1. Event Loop
+            mode_changed = False
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     running = False
                 elif event.type == pygame.KEYDOWN:
                     if event.key in (pygame.K_f, pygame.K_F11):
-                        self.toggle_fullscreen()
+                        mode_changed = self.toggle_fullscreen() or mode_changed
                     elif event.key == pygame.K_ESCAPE:
                         if self.fullscreen:
-                            self.toggle_fullscreen()
+                            mode_changed = self.toggle_fullscreen() or mode_changed
                         else:
                             running = False
-                elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    position = self._logical_position(event.pos)
-                    if position is None:
-                        continue
-
-                    # Spawn ripple and trigger a water splash sound
+                elif (
+                    event.type == pygame.MOUSEBUTTONDOWN
+                    and event.button == 1
+                    and not mode_changed
+                ):
                     if len(self.ripples) >= MAX_RIPPLES:
                         self.ripples.pop(0)
-                    self.ripples.append(Ripple(*position))
+                    self.ripples.append(
+                        Ripple(event.pos[0], event.pos[1], self.scene_scale)
+                    )
                     if self.resources.ripple_sounds:
                         random.choice(self.resources.ripple_sounds).play()
 
-            # 2. Spawning updates
             self.spawn_acc += dt
-            while self.spawn_acc >= LEAF_SPAWN_INTERVAL:
-                self.spawn_acc -= LEAF_SPAWN_INTERVAL
-                self.leaves.append(Leaf(self.W, self.H, self.resources.leaf_variants))
+            while self.spawn_acc >= self.leaf_spawn_interval:
+                self.spawn_acc -= self.leaf_spawn_interval
+                self.leaves.append(
+                    Leaf(self.W, self.H, self.leaf_variants, self.scene_scale)
+                )
 
-            # 3. Update physics and boundaries
             for leaf in self.leaves:
                 leaf.update(dt)
-            self.leaves = [l for l in self.leaves if not l.offscreen()]
+            self.leaves = [leaf for leaf in self.leaves if not leaf.offscreen()]
 
-            for r in self.ripples:
-                r.update(dt)
-            self.ripples = [r for r in self.ripples if r.alive()]
+            for ripple in self.ripples:
+                ripple.update(dt)
+            self.ripples = [ripple for ripple in self.ripples if ripple.alive()]
 
-            # 4. Rendering
             self.screen.blit(self.pond_img, (0, 0))
-            for r in self.ripples:
-                r.render(self.screen, self.pond_rgb)
+            for ripple in self.ripples:
+                ripple.render(self.screen, self.pond_rgb)
             for leaf in self.leaves:
                 leaf.draw(self.screen, t)
 
-            self._present()
+            pygame.display.flip()
 
         pygame.quit()
 
     def _create_display(self):
         """Create the initial native-size display."""
-        return pygame.display.set_mode((self.W, self.H))
+        return pygame.display.set_mode(self.base_size)
 
-    def _update_viewport(self):
-        """Fill fullscreen without distortion by uniformly scaling and cropping."""
-        display_width, display_height = self.display.get_size()
-        if not self.fullscreen:
-            self.viewport = pygame.Rect(0, 0, display_width, display_height)
-            return
+    @staticmethod
+    def _cover_surface(source, size):
+        """Create a target-sized background using one uniform scale and center crop."""
+        target_width, target_height = size
+        source_width, source_height = source.get_size()
+        scale = max(target_width / source_width, target_height / source_height)
+        scaled_size = (
+            max(target_width, round(source_width * scale)),
+            max(target_height, round(source_height * scale)),
+        )
+        scaled = pygame.transform.smoothscale(source, scaled_size)
+        background = pygame.Surface(size).convert()
+        background.blit(
+            scaled,
+            (
+                (target_width - scaled_size[0]) // 2,
+                (target_height - scaled_size[1]) // 2,
+            ),
+        )
+        return background
 
-        scale = max(display_width / self.W, display_height / self.H)
-        width = math.ceil(self.W * scale)
-        height = math.ceil(self.H * scale)
-        self.viewport = pygame.Rect(
-            (display_width - width) // 2,
-            (display_height - height) // 2,
-            width,
-            height,
+    def _rebuild_scene(self, size):
+        """Regenerate render surfaces and simulation entities at the active resolution."""
+        self.W, self.H = size
+        self.screen = self.display
+
+        base_width, base_height = self.base_size
+        self.scene_scale = min(self.W / base_width, self.H / base_height)
+        self.pond_img = self._cover_surface(self.pond_source, size)
+        self.pond_rgb = (
+            pygame.surfarray.array3d(self.pond_img).swapaxes(0, 1).copy()
+        )
+        self.leaf_variants = self.resources.leaf_variants_for_scale(
+            self.scene_scale
         )
 
-    def _logical_position(self, position):
-        """Map a display position into the simulation's logical coordinates."""
-        if not self.viewport.collidepoint(position):
-            return None
+        self.ripples.clear()
+        self.leaves.clear()
+        self.spawn_acc = 0.0
 
-        x = (position[0] - self.viewport.x) * self.W / self.viewport.width
-        y = (position[1] - self.viewport.y) * self.H / self.viewport.height
-        return min(self.W - 1, int(x)), min(self.H - 1, int(y))
-
-    def _present(self):
-        """Copy the canvas to the window or aspect-fill the fullscreen display."""
-        if self.fullscreen:
-            frame = pygame.transform.smoothscale(self.screen, self.viewport.size)
-            self.display.blit(frame, self.viewport)
-        else:
-            self.display.blit(self.screen, (0, 0))
-        pygame.display.flip()
+        density_scale = (self.W * self.H) / (
+            base_width * base_height * self.scene_scale * self.scene_scale
+        )
+        self.leaf_spawn_interval = LEAF_SPAWN_INTERVAL / max(1.0, density_scale)
+        initial_count = max(
+            LEAF_INITIAL_COUNT,
+            round(LEAF_INITIAL_COUNT * density_scale),
+        )
+        for _ in range(initial_count):
+            leaf = Leaf(
+                self.W,
+                self.H,
+                self.leaf_variants,
+                self.scene_scale,
+            )
+            leaf.y = random.uniform(-200 * self.scene_scale, self.H)
+            self.leaves.append(leaf)
 
     def toggle_fullscreen(self):
-        """Toggle SDL desktop fullscreen without changing the monitor mode."""
+        """Toggle SDL desktop fullscreen and rebuild the scene at its resolution."""
         target = not self.fullscreen
         try:
             if target:
@@ -165,10 +175,11 @@ class Engine:
                 self.window.set_windowed()
         except pygame.error as error:
             print(f"Could not change fullscreen mode: {error}", file=sys.stderr)
-            return
+            return False
 
         self.fullscreen = target
         pygame.event.pump()
         pygame.display.get_window_size()
         self.display = pygame.display.get_surface()
-        self._update_viewport()
+        self._rebuild_scene(self.display.get_size())
+        return True

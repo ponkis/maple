@@ -40,10 +40,10 @@ Larger ripple radii, widths, or simultaneous counts increase per-frame NumPy wor
 
 ## Display
 
-The pond asset determines the `960 × 800` logical resolution. There is intentionally no display setting or on-screen fullscreen button:
+The pond asset determines the initial `960 × 800` window size. Fullscreen regenerates the animated scene at the active desktop resolution. There is intentionally no display setting or on-screen fullscreen button:
 
 - `F` and `F11` toggle fullscreen.
 - `Esc` returns to windowed mode before it quits the application.
-- SDL desktop fullscreen keeps the monitor's current resolution and covers its complete bounds. Maple uniformly scales and center-crops the logical canvas to fill without distortion, then maps pointer coordinates through that crop.
+- SDL desktop fullscreen keeps the monitor's current resolution and covers its complete bounds. Maple rebuilds all scene-sized surfaces and NumPy buffers at that resolution, regenerates leaves and ripple metrics, and renders directly with native pointer coordinates.
 
-Replacing `pond.jpg` with another resolution changes the simulation bounds. Test leaf spawning, ripple edges, and fullscreen scaling after doing so.
+The fixed `pond.jpg` source is uniformly fitted and center-cropped once when a scene is rebuilt; animated frames are never viewport-scaled. Replacing it changes the initial window size and background composition, so test both display modes afterward.
