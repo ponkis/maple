@@ -8,8 +8,6 @@ An interactive recreation of the Android 4.0 Autumn live wallpaper.
 [![Pygame](https://img.shields.io/badge/pygame-2.x-0D8F45)](https://www.pygame.org/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-by **[ponkis](https://github.com/ponkis)** · powered by [ponkis.xyz](https://ponkis.xyz)
-
 </div>
 
 Maple brings the calm pond, falling leaves, and touch-driven ripples of the classic wallpaper to a lightweight native desktop window.
