@@ -2,6 +2,8 @@
 
 # maple
 
+![Maple logo](assets/screenshots/logo.png)
+
 An interactive recreation of the Android 4.0 Autumn live wallpaper.
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
